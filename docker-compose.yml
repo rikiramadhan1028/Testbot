@@ -5,6 +5,8 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -12,8 +14,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
     volumes:
       - ./logs:/app/logs
       - /etc/localtime:/etc/localtime:ro
@@ -24,48 +26,42 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   mongodb:
     image: mongo:6.0
     restart: unless-stopped
     environment:
       - MONGO_INITDB_DATABASE=roku_trade
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=secure_password_123
     volumes:
       - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - "27017:27017"
     networks:
       - roku-network
-    command: mongod --auth
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  # Optional: Redis for caching (can be removed if not needed)
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass redis_password_123
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
     networks:
       - roku-network
-
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - roku-bot
-    networks:
-      - roku-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 volumes:
   mongodb_data:
