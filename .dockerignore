@@ -1,0 +1,23 @@
+// .dockerignore
+/*
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+README.md
+.nyc_output
+coverage
+.nyc_output
+.coverage
+*.log
+logs
+backups
+.DS_Store
+Thumbs.db
+*/
+
